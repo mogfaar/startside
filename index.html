@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startside</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2f6f4f;
+    --note: #fff3a6;
+    --note-edge: #f2df6b;
+    --soon-bg: #fff4e5;
+    --soon-edge: #f59e0b;
+    --late-bg: #fdecec;
+    --late-edge: #dc2626;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1440px; margin: 0 auto; padding: 32px 20px 48px; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  #clock { font-size: 44px; font-weight: 300; letter-spacing: -1px; }
+  #date { color: var(--muted); font-size: 17px; }
+
+  h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; }
+
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 32px; align-items: start; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+
+  /* Frister */
+  .deadlines { padding: 16px; }
+  .dl-form { display: grid; gap: 8px; margin-bottom: 16px; }
+  .dl-form input {
+    font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text);
+  }
+  .dl-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .dl-form .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .btn {
+    border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 600;
+    padding: 8px 16px; border-radius: 10px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .dl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .dl {
+    position: relative;
+    padding: 10px 36px 10px 12px;
+    border-radius: 10px;
+    border-left: 4px solid var(--line);
+    background: #fafafa;
+  }
+  .dl.soon { background: var(--soon-bg); border-left-color: var(--soon-edge); }
+  .dl.late { background: var(--late-bg); border-left-color: var(--late-edge); }
+  .dl .title { font-weight: 600; word-break: break-word; }
+  .dl .meta { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; }
+  .dl.soon .left { color: #b45309; font-weight: 600; }
+  .dl.late .left { color: var(--late-edge); font-weight: 600; }
+
+  .x {
+    position: absolute; top: 4px; right: 6px;
+    border: 0; background: transparent; cursor: pointer;
+    font-size: 20px; line-height: 1; color: #9ca3af; opacity: 0; transition: opacity .15s;
+    padding: 4px 6px;
+  }
+  .dl:hover .x, .note:hover .x, .note:focus-within .x, .link:hover .x { opacity: 1; }
+  .x:hover { color: var(--late-edge); }
+
+  /* Lenker */
+  .links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .link {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    aspect-ratio: 1 / 1;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text); text-decoration: none;
+    font-weight: 500; text-align: center; padding: 12px;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+  }
+  .link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.07); border-color: #d1d5db; }
+  .link .icon { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; overflow: hidden; }
+  .link img.icon { object-fit: contain; }
+  .link .letter { background: var(--accent); color: #fff; font-size: 30px; font-weight: 600; }
+  .link .x { top: 6px; right: 8px; }
+
+  body.dragging .links { outline: 2px dashed var(--accent); outline-offset: 8px; border-radius: var(--radius); }
+  .drop-hint { display: none; color: var(--accent); font-size: 14px; font-weight: 600; margin: -24px 0 24px; }
+  body.dragging .drop-hint { display: block; }
+
+  /* Vær + lapper */
+  .bottom { display: grid; grid-template-columns: 360px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 1200px) { .bottom { grid-template-columns: 1fr; } }
+
+  .weather { overflow: hidden; }
+  .weather iframe { display: block; width: 100%; height: 360px; border: 0; }
+  .weather a { display: block; padding: 10px 14px; font-size: 14px; color: var(--accent); text-decoration: none; border-top: 1px solid var(--line); }
+
+  .notes-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .notes-head h2 { margin: 0; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .note {
+    position: relative;
+    background: var(--note);
+    border-bottom: 3px solid var(--note-edge);
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    min-height: 180px;
+  }
+  .note textarea {
+    width: 100%; height: 100%; min-height: 180px;
+    border: 0; background: transparent; resize: vertical;
+    padding: 16px; font: 16px/1.45 "Segoe UI", system-ui, sans-serif; color: #3a3320;
+    outline: none;
+  }
+  .note .x { color: #8a7a2e; }
+  .empty { color: var(--muted); padding: 12px 0; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div id="clock">--:--</div>
+    <div id="date"></div>
+  </header>
+
+  <div class="layout">
+
+    <!-- VENSTRE: frister -->
+    <aside>
+      <h2>Frister</h2>
+      <div class="panel deadlines">
+        <form class="dl-form" id="dlForm">
+          <input id="dlTitle" type="text" placeholder="Hva gjelder fristen?" required>
+          <div class="row">
+            <input id="dlDate" type="date" required>
+            <button class="btn" type="submit">Legg til</button>
+          </div>
+        </form>
+        <ul class="dl-list" id="dlList"></ul>
+      </div>
+    </aside>
+
+    <!-- HØYRE: lenker, vær, lapper -->
+    <main>
+      <h2>Lenker</h2>
+      <nav class="links" id="links"></nav>
+      <div class="drop-hint">Slipp her for å legge til som lenke</div>
+
+      <div class="bottom">
+        <section>
+          <h2>Været i Slemmestad</h2>
+          <div class="panel weather">
+            <!-- Byttes ut med koden fra yr.no/nb/widget hvis modulen ikke vises -->
+            <iframe src="https://www.yr.no/nb/innhold/1-73371/card.html" title="Værvarsel for Slemmestad fra Yr" loading="lazy"></iframe>
+            <a href="https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/1-73371/Norge/Akershus/Asker/Slemmestad" target="_blank" rel="noopener">Åpne full varsel på Yr →</a>
+          </div>
+        </section>
+
+        <section>
+          <div class="notes-head">
+            <h2>Lapper</h2>
+            <button class="btn" id="addNote">+ Ny lapp</button>
+          </div>
+          <div class="notes" id="notes"></div>
+        </section>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+// ---------- Hjelpefunksjoner for lagring ----------
+function load(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+// ---------- Egne ikoner ----------
+const SVG = {
+  // Kompass
+  compass: `<svg viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="14" fill="#2f6f4f"/>
+    <circle cx="32" cy="32" r="19" fill="none" stroke="#fff" stroke-width="3"/>
+    <polygon points="32,15 37,32 32,30 27,32" fill="#fff"/>
+    <polygon points="32,49 27,32 32,34 37,32" fill="#9fd3b6"/>
+    <circle cx="32" cy="32" r="2.5" fill="#2f6f4f" stroke="#fff" stroke-width="1.5"/></svg>`,
+  // Kart med forstørrelsesglass
+  mapSearch: `<svg viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="14" fill="#2b6cb0"/>
+    <path d="M12 18 L24 14 L36 18 L48 14 V42 L36 46 L24 42 L12 46 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M24 14 V42 M36 18 V30" stroke="#fff" stroke-width="2.5"/>
+    <circle cx="42" cy="38" r="7" fill="#2b6cb0" stroke="#fff" stroke-width="3"/>
+    <path d="M47 43 L53 49" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+};
+
+// ---------- LENKER: rediger her ----------
+// icon: en bildeadresse, svg: et av de egne ikonene over. Uten noen av dem hentes ikonet automatisk.
+const MILJODIR_ICON = "https://www.google.com/s2/favicons?domain=www.miljodirektoratet.no&sz=128";
+const LINKS = [
+  { name: "Claude",          url: "https://claude.ai" },
+  { name: "Wayfinder",       url: "https://friluft.avadaptive.no/wayfinder/", svg: "compass" },
+  { name: "Explorer",        url: "https://friluft.avadaptive.no/explorer",   svg: "mapSearch" },
+  { name: "Naturbase",       url: "https://kart.naturbase.no",                icon: MILJODIR_ICON },
+  { name: "Søknadssenteret", url: "https://soknadssenter.miljodirektoratet.no", icon: MILJODIR_ICON },
+  { name: "NRK",             url: "https://www.nrk.no" },
+  { name: "Gmail",           url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
+];
+
+const LINK_KEY = "startside-egne-lenker";
+let customLinks = load(LINK_KEY, []);
+const linksEl = document.getElementById("links");
+
+function letterIcon(name) {
+  const d = document.createElement("div");
+  d.className = "icon letter";
+  d.textContent = name[0].toUpperCase();
+  return d;
+}
+
+function makeIcon(l) {
+  if (l.svg && SVG[l.svg]) {
+    const d = document.createElement("div");
+    d.className = "icon";
+    d.innerHTML = SVG[l.svg];
+    return d;
+  }
+  let host;
+  try { host = new URL(l.url).hostname; } catch { return letterIcon(l.name); }
+  const img = document.createElement("img");
+  img.className = "icon";
+  img.alt = "";
+  img.src = l.icon || `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+  img.onerror = () => img.replaceWith(letterIcon(l.name));
+  return img;
+}
+
+function renderLinks() {
+  linksEl.innerHTML = "";
+  const all = [...LINKS.map(l => ({ ...l, fixed: true })), ...customLinks];
+  all.forEach(l => {
+    const a = document.createElement("a");
+    a.className = "link";
+    a.href = l.url;
+    const span = document.createElement("span");
+    span.textContent = l.name;
+    a.append(makeIcon(l), span);
+    if (!l.fixed) {
+      const x = document.createElement("button");
+      x.className = "x";
+      x.title = "Fjern lenke";
+      x.textContent = "×";
+      x.addEventListener("click", e => {
+        e.preventDefault();
+        if (!confirm(`Fjerne «${l.name}»?`)) return;
+        customLinks = customLinks.filter(c => c !== l);
+        save(LINK_KEY, customLinks);
+        renderLinks();
+      });
+      a.append(x);
+    }
+    linksEl.append(a);
+  });
+}
+renderLinks();
+
+// ---------- Dra inn lenker ----------
+let dragDepth = 0;
+function isLinkDrag(e) {
+  const t = e.dataTransfer?.types || [];
+  return t.includes("text/uri-list") || t.includes("text/plain");
+}
+document.addEventListener("dragenter", e => {
+  if (!isLinkDrag(e)) return;
+  dragDepth++;
+  document.body.classList.add("dragging");
+});
+document.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) document.body.classList.remove("dragging");
+});
+document.addEventListener("dragover", e => {
+  if (!isLinkDrag(e)) return;
+  if (e.target.closest("textarea, input")) return; // la tekst slippes i lapper og felt
+  e.preventDefault();
+});
+document.addEventListener("drop", e => {
+  dragDepth = 0;
+  document.body.classList.remove("dragging");
+  if (e.target.closest("textarea, input")) return;
+  e.preventDefault();
+
+  const raw = (e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain") || "")
+    .split("\n").map(s => s.trim()).find(s => s && !s.startsWith("#"));
+  let url;
+  try { url = new URL(raw); } catch { return; }
+  if (!/^https?:$/.test(url.protocol)) return;
+
+  // Prøv å finne tittelen fra det som ble dratt, ellers bruk domenet
+  let guess = url.hostname.replace(/^www\./, "");
+  const html = e.dataTransfer.getData("text/html");
+  if (html) {
+    const txt = new DOMParser().parseFromString(html, "text/html").body.textContent.trim();
+    if (txt && txt.length < 60 && !txt.startsWith("http")) guess = txt;
+  }
+  const name = prompt("Hva skal lenken hete?", guess);
+  if (!name || !name.trim()) return;
+  customLinks.push({ name: name.trim(), url: url.href });
+  save(LINK_KEY, customLinks);
+  renderLinks();
+});
+
+// ---------- Klokke og dato ----------
+function tick() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+  const ds = now.toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+}
+tick();
+setInterval(tick, 10000);
+
+// ---------- Frister ----------
+const DL_KEY = "startside-frister";
+let deadlines = load(DL_KEY, []);
+const dlList = document.getElementById("dlList");
+
+function daysUntil(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+function leftText(n) {
+  if (n === 0) return "I dag";
+  if (n === 1) return "I morgen";
+  if (n === -1) return "I går";
+  if (n < 0) return `${-n} dager siden`;
+  if (n < 14) return `Om ${n} dager`;
+  const w = Math.floor(n / 7), r = n % 7;
+  return r ? `Om ${w} uker og ${r} d` : `Om ${w} uker`;
+}
+function formatDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("nb-NO", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function renderDeadlines() {
+  dlList.innerHTML = "";
+  if (!deadlines.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "Ingen frister lagt inn.";
+    dlList.append(li);
+    return;
+  }
+  [...deadlines].sort((a, b) => a.date.localeCompare(b.date)).forEach(dl => {
+    const n = daysUntil(dl.date);
+    const li = document.createElement("li");
+    li.className = "dl" + (n < 0 ? " late" : n < 14 ? " soon" : "");
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = dl.title;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const when = document.createElement("span");
+    when.textContent = formatDate(dl.date);
+    const left = document.createElement("span");
+    left.className = "left";
+    left.textContent = leftText(n);
+    meta.append(when, left);
+    const x = document.createElement("button");
+    x.className = "x";
+    x.title = "Fjern frist";
+    x.textContent = "×";
+    x.addEventListener("click", () => {
+      deadlines = deadlines.filter(d => d !== dl);
+      save(DL_KEY, deadlines);
+      renderDeadlines();
+    });
+    li.append(title, meta, x);
+    dlList.append(li);
+  });
+}
+
+document.getElementById("dlForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const t = document.getElementById("dlTitle");
+  const d = document.getElementById("dlDate");
+  if (!t.value.trim() || !d.value) return;
+  deadlines.push({ title: t.value.trim(), date: d.value });
+  save(DL_KEY, deadlines);
+  t.value = ""; d.value = "";
+  renderDeadlines();
+  t.focus();
+});
+renderDeadlines();
+// Oppdater "gjenstående tid" når dagen skifter
+setInterval(renderDeadlines, 60 * 60 * 1000);
+
+// ---------- Gule lapper ----------
+const NOTE_KEY = "startside-lapper";
+let notes = load(NOTE_KEY, []);
+const notesEl = document.getElementById("notes");
+
+function renderNotes() {
+  notesEl.innerHTML = "";
+  if (!notes.length) {
+    const p = document.createElement("div");
+    p.className = "empty";
+    p.textContent = "Ingen lapper ennå.";
+    notesEl.append(p);
+    return;
+  }
+  notes.forEach((n, i) => {
+    const div = document.createElement("div");
+    div.className = "note";
+    const ta = document.createElement("textarea");
+    ta.value = n.text;
+    ta.placeholder = "Skriv noe…";
+    ta.addEventListener("input", () => { notes[i].text = ta.value; save(NOTE_KEY, notes); });
+    const x = document.createElement("button");
+    x.className = "x";
+    x.title = "Slett lapp";
+    x.textContent = "×";
+    x.addEventListener("click", () => {
+      if (ta.value.trim() && !confirm("Slette denne lappen?")) return;
+      notes.splice(i, 1); save(NOTE_KEY, notes); renderNotes();
+    });
+    div.append(ta, x);
+    notesEl.append(div);
+  });
+}
+
+document.getElementById("addNote").addEventListener("click", () => {
+  notes.unshift({ text: "" });
+  save(NOTE_KEY, notes);
+  renderNotes();
+  notesEl.querySelector("textarea")?.focus();
+});
+renderNotes();
+</script>
+</body>
+</html>
