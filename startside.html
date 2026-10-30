@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startside</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2f6f4f;
+    --note: #fff3a6;
+    --note-edge: #f2df6b;
+    --soon-bg: #fff4e5;
+    --soon-edge: #f59e0b;
+    --late-bg: #fdecec;
+    --late-edge: #dc2626;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 2200px; margin: 0 auto; padding: 32px clamp(16px, 3vw, 56px) 32px; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 28px; }
+  #clock { font-size: 44px; font-weight: 300; letter-spacing: -1px; }
+  #date { color: var(--muted); font-size: 17px; }
+
+  h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; }
+
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 36px; align-items: start; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+
+  .btn {
+    border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 600;
+    padding: 8px 16px; border-radius: 10px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+  .btn.ghost:hover { color: var(--text); border-color: #d1d5db; filter: none; }
+
+  /* Frister */
+  .deadlines { padding: 16px; }
+  .dl-form { display: grid; gap: 8px; margin-bottom: 16px; }
+  .dl-form input {
+    font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text);
+  }
+  .dl-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .dl-form .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .dl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .dl {
+    position: relative;
+    padding: 10px 36px 10px 12px;
+    border-radius: 10px;
+    border-left: 4px solid var(--line);
+    background: #fafafa;
+  }
+  .dl.soon { background: var(--soon-bg); border-left-color: var(--soon-edge); }
+  .dl.late { background: var(--late-bg); border-left-color: var(--late-edge); }
+  .dl .title { font-weight: 600; word-break: break-word; }
+  .dl .meta { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; }
+  .dl.soon .left { color: #b45309; font-weight: 600; }
+  .dl.late .left { color: var(--late-edge); font-weight: 600; }
+
+  /* Små knapper (slett / gi nytt navn) */
+  .tools { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+  .dl:hover .tools, .note:hover .tools, .note:focus-within .tools, .link:hover .tools { opacity: 1; }
+  .tool {
+    border: 0; background: transparent; cursor: pointer;
+    font-size: 18px; line-height: 1; color: #9ca3af; padding: 4px 6px; border-radius: 6px;
+  }
+  .tool:hover { color: var(--text); background: rgba(0,0,0,.05); }
+  .tool.del:hover { color: var(--late-edge); }
+
+  /* Lenker */
+  .links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .link {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    aspect-ratio: 1 / 1;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text); text-decoration: none;
+    font-weight: 500; text-align: center; padding: 12px;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+  }
+  .link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.07); border-color: #d1d5db; }
+  .link span { word-break: break-word; }
+  .link .icon { width: 64px; height: 64px; border-radius: 14px; display: grid; place-items: center; overflow: hidden; flex: none; }
+  .link img.icon { object-fit: contain; }
+  .link .letter { color: #fff; font-size: 30px; font-weight: 600; }
+  .link.add {
+    border-style: dashed; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-weight: 500;
+  }
+  .link.add .plus { font-size: 40px; font-weight: 300; line-height: 1; }
+  .links-empty { grid-column: 1 / -1; color: var(--muted); font-size: 15px; padding: 4px 0; }
+
+  body.dragging .links { outline: 2px dashed var(--accent); outline-offset: 8px; border-radius: var(--radius); }
+  .drop-hint { display: none; color: var(--accent); font-size: 14px; font-weight: 600; margin: -24px 0 24px; }
+  body.dragging .drop-hint { display: block; }
+
+  /* Vær + lapper */
+  .bottom {
+    display: grid; gap: 32px; align-items: start;
+    grid-template-columns: 360px minmax(300px, 400px) 1fr;
+    grid-template-areas: "weather shop notes";
+  }
+  .bottom .s-weather { grid-area: weather; }
+  .bottom .s-shop { grid-area: shop; }
+  .bottom .s-notes { grid-area: notes; }
+  @media (max-width: 1500px) {
+    .bottom { grid-template-columns: 360px 1fr; grid-template-areas: "weather shop" "notes notes"; }
+  }
+  @media (max-width: 1100px) {
+    .bottom { grid-template-columns: 1fr; grid-template-areas: "weather" "shop" "notes"; }
+  }
+
+  /* Handlelista */
+  .shop { padding: 14px; }
+  .shop-form { display: flex; gap: 8px; margin-bottom: 10px; }
+  .shop-form input, .shop-setup input {
+    flex: 1; min-width: 0; font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text);
+  }
+  .shop-form input:focus, .shop-setup input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .shop-form .btn { font-size: 20px; padding: 4px 14px; }
+  .shop-list { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+  .shop-cat { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 10px 4px 4px; }
+  .shop-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 7px 4px; border: 0; background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer; border-radius: 8px;
+  }
+  .shop-item:hover { background: #f3f4f6; }
+  .shop-item .ring { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #9ca3af; }
+  .shop-item:hover .ring { border-color: var(--accent); }
+  .shop-item .qty { color: var(--accent); font-weight: 600; margin-right: 4px; }
+  .shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .shop-foot button { border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; text-decoration: underline; padding: 0; }
+  .shop-head-link { font-size: 14px; color: var(--accent); text-decoration: none; font-weight: 600; }
+  .shop-setup { display: grid; gap: 10px; font-size: 15px; color: var(--muted); }
+  .shop-setup form { display: flex; gap: 8px; }
+  .shop-err { color: var(--late-edge); font-size: 14px; }
+
+  .weather { overflow: hidden; }
+  .weather iframe { display: block; width: 100%; height: 360px; border: 0; }
+  .weather a { display: block; padding: 10px 14px; font-size: 14px; color: var(--accent); text-decoration: none; border-top: 1px solid var(--line); }
+
+  .notes-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .notes-head h2 { margin: 0; }
+  .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .note {
+    position: relative;
+    background: var(--note);
+    border-bottom: 3px solid var(--note-edge);
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    min-height: 220px;
+  }
+  .note textarea {
+    width: 100%; height: 100%; min-height: 220px;
+    border: 0; background: transparent; resize: vertical;
+    padding: 16px 28px 16px 16px; font: 16px/1.45 "Segoe UI", system-ui, sans-serif; color: #3a3320;
+    outline: none;
+  }
+  .note .tool { color: #8a7a2e; }
+  .empty { color: var(--muted); padding: 12px 0; font-size: 15px; }
+
+  /* Bunntekst med sikkerhetskopi */
+  footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 14px;
+  }
+  footer .grow { flex: 1; }
+  footer .btn { font-size: 14px; padding: 6px 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div id="clock">--:--</div>
+    <div id="date"></div>
+  </header>
+
+  <div class="layout">
+
+    <!-- VENSTRE: frister -->
+    <aside>
+      <h2>Frister</h2>
+      <div class="panel deadlines">
+        <form class="dl-form" id="dlForm">
+          <input id="dlTitle" type="text" placeholder="Hva gjelder fristen?" required>
+          <div class="row">
+            <input id="dlDate" type="date" required>
+            <button class="btn" type="submit">Legg til</button>
+          </div>
+        </form>
+        <ul class="dl-list" id="dlList"></ul>
+      </div>
+    </aside>
+
+    <!-- HØYRE: lenker, vær, lapper -->
+    <main>
+      <h2>Lenker</h2>
+      <nav class="links" id="links"></nav>
+      <div class="drop-hint">Slipp her for å legge til som lenke</div>
+
+      <div class="bottom">
+        <section class="s-weather">
+          <h2>Været i Slemmestad</h2>
+          <div class="panel weather">
+            <!-- Byttes ut med koden fra yr.no/nb/widget hvis du vil ha et annet sted -->
+            <iframe src="https://www.yr.no/nb/innhold/1-73371/card.html" title="Værvarsel for Slemmestad fra Yr" loading="lazy"></iframe>
+            <a href="https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/1-73371/Norge/Akershus/Asker/Slemmestad" target="_blank" rel="noopener">Åpne full varsel på Yr →</a>
+          </div>
+        </section>
+
+        <section class="s-shop">
+          <div class="notes-head">
+            <h2>Handlelista</h2>
+            <a class="shop-head-link" id="shopOpen" href="#" target="_blank" rel="noopener" hidden>Åpne appen →</a>
+          </div>
+          <div class="panel shop">
+            <div class="shop-setup" id="shopSetup" hidden>
+              <span>Lim inn delingslenken fra Handlelista (knappen «Del» i appen).</span>
+              <form id="shopJoin" autocomplete="off">
+                <input id="shopLink" type="text" placeholder="https://…#kode" aria-label="Lenke til handlelista">
+                <button class="btn" type="submit">Koble til</button>
+              </form>
+              <span class="shop-err" id="shopJoinErr" hidden>Fant ingen listekode i lenken. Sjekk at hele lenken er med.</span>
+            </div>
+            <div id="shopMain" hidden>
+              <form class="shop-form" id="shopForm" autocomplete="off">
+                <input id="shopInput" type="text" placeholder="Legg til, f.eks. «2 melk»" aria-label="Ny vare">
+                <button class="btn" type="submit" aria-label="Legg til">+</button>
+              </form>
+              <ul class="shop-list" id="shopList"></ul>
+              <div class="shop-foot">
+                <span id="shopStatus">Kobler til …</span>
+                <button type="button" id="shopDisconnect">Koble fra</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="s-notes">
+          <div class="notes-head">
+            <h2>Lapper</h2>
+            <button class="btn" id="addNote">+ Ny lapp</button>
+          </div>
+          <div class="notes" id="notes"></div>
+        </section>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>
+    <span class="grow">Lenker, frister og lapper lagres i denne nettleseren. Handlelista hentes fra Firebase.</span>
+    <button class="btn ghost" id="exportBtn">Lagre sikkerhetskopi</button>
+    <button class="btn ghost" id="importBtn">Hent sikkerhetskopi</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+  </footer>
+</div>
+
+<script>
+// ---------- Lagring ----------
+const KEYS = { links: "startside-egne-lenker", deadlines: "startside-frister", notes: "startside-lapper" };
+function load(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function toolButton(symbol, title, cls, onClick) {
+  const b = document.createElement("button");
+  b.className = "tool " + (cls || "");
+  b.type = "button";
+  b.title = title;
+  b.textContent = symbol;
+  b.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); onClick(); });
+  return b;
+}
+
+// ---------- Egne ikoner for kjente sider ----------
+// Sider som ligger bak innlogging har ofte ikke noe ikon som kan hentes. Her kan du gi dem et eget.
+const SVG = {
+  compass: `<svg viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="14" fill="#2f6f4f"/>
+    <circle cx="32" cy="32" r="19" fill="none" stroke="#fff" stroke-width="3"/>
+    <polygon points="32,15 37,32 32,30 27,32" fill="#fff"/>
+    <polygon points="32,49 27,32 32,34 37,32" fill="#9fd3b6"/>
+    <circle cx="32" cy="32" r="2.5" fill="#2f6f4f" stroke="#fff" stroke-width="1.5"/></svg>`,
+  mapSearch: `<svg viewBox="0 0 64 64" width="64" height="64"><rect width="64" height="64" rx="14" fill="#2b6cb0"/>
+    <path d="M12 18 L24 14 L36 18 L48 14 V42 L36 46 L24 42 L12 46 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M24 14 V42 M36 18 V30" stroke="#fff" stroke-width="2.5"/>
+    <circle cx="42" cy="38" r="7" fill="#2b6cb0" stroke="#fff" stroke-width="3"/>
+    <path d="M47 43 L53 49" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+};
+const MILJODIR_ICON = "https://www.google.com/s2/favicons?domain=www.miljodirektoratet.no&sz=128";
+// Adressen må begynne med teksten til venstre for at ikonet skal brukes.
+const KNOWN_ICONS = [
+  ["https://friluft.avadaptive.no/wayfinder", { svg: "compass" }],
+  ["https://friluft.avadaptive.no/explorer",  { svg: "mapSearch" }],
+  ["https://kart.naturbase.no",               { icon: MILJODIR_ICON }],
+  ["https://soknadssenter.miljodirektoratet.no", { icon: MILJODIR_ICON }],
+  ["https://mail.google.com",                 { icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" }],
+];
+
+const LETTER_COLORS = ["#2f6f4f", "#2b6cb0", "#7c3aed", "#b45309", "#be185d", "#0f766e", "#4b5563", "#b91c1c"];
+function letterIcon(name) {
+  const d = document.createElement("div");
+  d.className = "icon letter";
+  const ch = (name.trim()[0] || "?").toUpperCase();
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  d.style.background = LETTER_COLORS[h % LETTER_COLORS.length];
+  d.textContent = ch;
+  return d;
+}
+
+function makeIcon(l) {
+  const known = KNOWN_ICONS.find(([prefix]) => l.url.startsWith(prefix));
+  const spec = known ? known[1] : {};
+  if (spec.svg && SVG[spec.svg]) {
+    const d = document.createElement("div");
+    d.className = "icon";
+    d.innerHTML = SVG[spec.svg];
+    return d;
+  }
+  let host;
+  try { host = new URL(l.url).hostname; } catch { return letterIcon(l.name); }
+  const img = document.createElement("img");
+  img.className = "icon";
+  img.alt = "";
+  img.src = spec.icon || `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+  img.onerror = () => img.replaceWith(letterIcon(l.name));
+  // Når nettstedet ikke har noe skikkelig ikon, sender Google en liten globus. Bruk forbokstav i stedet.
+  img.onload = () => { if (!spec.icon && img.naturalWidth <= 16) img.replaceWith(letterIcon(l.name)); };
+  return img;
+}
+
+// ---------- Lenker ----------
+let links = load(KEYS.links, []);
+const linksEl = document.getElementById("links");
+
+function addLink(url, name) {
+  links.push({ name, url });
+  save(KEYS.links, links);
+  renderLinks();
+}
+
+function renderLinks() {
+  linksEl.innerHTML = "";
+  if (!links.length) {
+    const p = document.createElement("div");
+    p.className = "links-empty";
+    p.textContent = "Ingen lenker ennå. Dra ikonet fra adressefeltet hit, eller trykk på pluss-ruta.";
+    linksEl.append(p);
+  }
+  links.forEach(l => {
+    const a = document.createElement("a");
+    a.className = "link";
+    a.href = l.url;
+    const span = document.createElement("span");
+    span.textContent = l.name;
+    const tools = document.createElement("div");
+    tools.className = "tools";
+    tools.append(
+      toolButton("✎", "Gi nytt navn", "", () => {
+        const n = prompt("Nytt navn:", l.name);
+        if (!n || !n.trim()) return;
+        l.name = n.trim(); save(KEYS.links, links); renderLinks();
+      }),
+      toolButton("×", "Fjern lenke", "del", () => {
+        if (!confirm(`Fjerne «${l.name}»?`)) return;
+        links = links.filter(c => c !== l); save(KEYS.links, links); renderLinks();
+      })
+    );
+    a.append(makeIcon(l), span, tools);
+    linksEl.append(a);
+  });
+
+  // Rute for å legge til lenke manuelt
+  const add = document.createElement("button");
+  add.className = "link add";
+  add.type = "button";
+  add.innerHTML = `<span class="plus">+</span><span>Legg til lenke</span>`;
+  add.addEventListener("click", () => {
+    let raw = prompt("Lim inn adressen:");
+    if (!raw || !raw.trim()) return;
+    raw = raw.trim();
+    if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+    let url;
+    try { url = new URL(raw); } catch { alert("Det ser ikke ut som en gyldig adresse."); return; }
+    const name = prompt("Hva skal lenken hete?", url.hostname.replace(/^www\./, ""));
+    if (!name || !name.trim()) return;
+    addLink(url.href, name.trim());
+  });
+  linksEl.append(add);
+}
+renderLinks();
+
+// ---------- Dra inn lenker ----------
+let dragDepth = 0;
+function isLinkDrag(e) {
+  const t = e.dataTransfer?.types || [];
+  return (t.includes("text/uri-list") || t.includes("text/plain")) && !t.includes("Files");
+}
+document.addEventListener("dragenter", e => {
+  if (!isLinkDrag(e)) return;
+  dragDepth++;
+  document.body.classList.add("dragging");
+});
+document.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) document.body.classList.remove("dragging");
+});
+document.addEventListener("dragover", e => {
+  if (!isLinkDrag(e)) return;
+  if (e.target.closest("textarea, input")) return; // la tekst slippes i lapper og felt
+  e.preventDefault();
+});
+document.addEventListener("drop", e => {
+  dragDepth = 0;
+  document.body.classList.remove("dragging");
+  if (e.target.closest("textarea, input")) return;
+  e.preventDefault();
+
+  const raw = (e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain") || "")
+    .split("\n").map(s => s.trim()).find(s => s && !s.startsWith("#"));
+  let url;
+  try { url = new URL(raw); } catch { return; }
+  if (!/^https?:$/.test(url.protocol)) return;
+
+  // Prøv å finne tittelen fra det som ble dratt, ellers bruk domenet
+  let guess = url.hostname.replace(/^www\./, "");
+  const html = e.dataTransfer.getData("text/html");
+  if (html) {
+    const txt = new DOMParser().parseFromString(html, "text/html").body.textContent.trim();
+    if (txt && txt.length < 60 && !txt.startsWith("http")) guess = txt;
+  }
+  const name = prompt("Hva skal lenken hete?", guess);
+  if (!name || !name.trim()) return;
+  addLink(url.href, name.trim());
+});
+
+// ---------- Klokke og dato ----------
+function tick() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+  const ds = now.toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+}
+tick();
+setInterval(tick, 10000);
+
+// ---------- Frister ----------
+let deadlines = load(KEYS.deadlines, []);
+const dlList = document.getElementById("dlList");
+
+function daysUntil(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+function leftText(n) {
+  if (n === 0) return "I dag";
+  if (n === 1) return "I morgen";
+  if (n === -1) return "I går";
+  if (n < 0) return `${-n} dager siden`;
+  if (n < 14) return `Om ${n} dager`;
+  const w = Math.floor(n / 7), r = n % 7;
+  return r ? `Om ${w} uker og ${r} d` : `Om ${w} uker`;
+}
+function formatDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("nb-NO", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function renderDeadlines() {
+  dlList.innerHTML = "";
+  if (!deadlines.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "Ingen frister lagt inn.";
+    dlList.append(li);
+    return;
+  }
+  [...deadlines].sort((a, b) => a.date.localeCompare(b.date)).forEach(dl => {
+    const n = daysUntil(dl.date);
+    const li = document.createElement("li");
+    li.className = "dl" + (n < 0 ? " late" : n < 14 ? " soon" : "");
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = dl.title;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const when = document.createElement("span");
+    when.textContent = formatDate(dl.date);
+    const left = document.createElement("span");
+    left.className = "left";
+    left.textContent = leftText(n);
+    meta.append(when, left);
+    const tools = document.createElement("div");
+    tools.className = "tools";
+    tools.append(toolButton("×", "Fjern frist", "del", () => {
+      deadlines = deadlines.filter(d => d !== dl);
+      save(KEYS.deadlines, deadlines);
+      renderDeadlines();
+    }));
+    li.append(title, meta, tools);
+    dlList.append(li);
+  });
+}
+
+document.getElementById("dlForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const t = document.getElementById("dlTitle");
+  const d = document.getElementById("dlDate");
+  if (!t.value.trim() || !d.value) return;
+  deadlines.push({ title: t.value.trim(), date: d.value });
+  save(KEYS.deadlines, deadlines);
+  t.value = ""; d.value = "";
+  renderDeadlines();
+  t.focus();
+});
+renderDeadlines();
+setInterval(renderDeadlines, 60 * 60 * 1000); // oppdater gjenstående tid
+
+// ---------- Gule lapper ----------
+let notes = load(KEYS.notes, []);
+const notesEl = document.getElementById("notes");
+
+function renderNotes() {
+  notesEl.innerHTML = "";
+  if (!notes.length) {
+    const p = document.createElement("div");
+    p.className = "empty";
+    p.textContent = "Ingen lapper ennå.";
+    notesEl.append(p);
+    return;
+  }
+  notes.forEach((n, i) => {
+    const div = document.createElement("div");
+    div.className = "note";
+    const ta = document.createElement("textarea");
+    ta.value = n.text;
+    ta.placeholder = "Skriv noe…";
+    ta.addEventListener("input", () => { notes[i].text = ta.value; save(KEYS.notes, notes); });
+    const tools = document.createElement("div");
+    tools.className = "tools";
+    tools.append(toolButton("×", "Slett lapp", "del", () => {
+      if (ta.value.trim() && !confirm("Slette denne lappen?")) return;
+      notes.splice(i, 1); save(KEYS.notes, notes); renderNotes();
+    }));
+    div.append(ta, tools);
+    notesEl.append(div);
+  });
+}
+
+document.getElementById("addNote").addEventListener("click", () => {
+  notes.unshift({ text: "" });
+  save(KEYS.notes, notes);
+  renderNotes();
+  notesEl.querySelector("textarea")?.focus();
+});
+renderNotes();
+
+// ---------- Handlelista (Firebase) ----------
+// Samme database som Handlelista-appen. Listekoden ligger IKKE i koden her (repoet er offentlig),
+// den limes inn på siden og lagres bare i nettleseren.
+const firebaseConfig = {
+  apiKey: "AIzaSyChw2sQl8UmsaEb1k3VlaFue1IBw7dZZy0",
+  authDomain: "handleliste-472b1.firebaseapp.com",
+  projectId: "handleliste-472b1",
+  storageBucket: "handleliste-472b1.firebasestorage.app",
+  messagingSenderId: "959574362797",
+  appId: "1:959574362797:web:c026a0319601f50b6d9424"
+};
+const FB_VER = "10.12.2";
+const SHOP_CODE_KEY = "startside-handleliste-kode";
+const SHOP_URL_KEY = "startside-handleliste-url";
+
+// Avdelinger og ordliste, kopiert fra Handlelista så varene havner i samme avdeling
+const CATS = [
+  ["frukt", "Frukt og grønt", "eple epler banan bananer appelsin sitron lime pære druer avokado tomat tomater agurk salat paprika løk hvitløk gulrot gulrøtter potet poteter brokkoli blomkål squash sopp ingefær basilikum persille koriander spinat mais jordbær blåbær bringebær kiwi mango melon purre selleri søtpotet chili vårløk ruccola kål"],
+  ["brod", "Brød og bakst", "brød loff rundstykker baguette knekkebrød lomper tortilla wraps pitabrød boller rugbrød flatbrød"],
+  ["meieri", "Meieri og egg", "melk lettmelk helmelk havremelk fløte matfløte kremfløte rømme lettrømme yoghurt skyr kesam smør margarin bremykt ost brunost gulost norvegia jarlsberg parmesan mozzarella fetaost cottage egg kulturmelk"],
+  ["kjott", "Kjøtt og fisk", "kjøttdeig karbonadedeig kylling kyllingfilet kyllingbryst bacon pølser skinke salami leverpostei laks torsk fisk fiskekaker fiskeboller reker svinekjøtt biff entrecote koteletter kjøtt kalkun pålegg makrell tunfisk"],
+  ["torr", "Tørrvarer", "pasta spagetti makaroni ris havregryn hvetemel mel sukker salt pepper krydder buljong tacokrydder tacosaus tomatsaus hermetikk bønner linser kikerter müsli frokostblanding cornflakes olje olivenolje eddik ketchup sennep majones honning syltetøy nugatti peanøttsmør nøtter kaffe te kakao sjokolade chips snacks godteri"],
+  ["frys", "Frysevarer", "pizza is iskrem fiskepinner grønnsaksblanding frossen frosne"],
+  ["drikke", "Drikke", "brus cola juice saft vann farris mineralvann øl vin solo pepsi energidrikk"],
+  ["hus", "Hus og hygiene", "dopapir toalettpapir tørkerull kjøkkenrull oppvaskmiddel oppvasktabletter vaskemiddel tøymykner såpe sjampo balsam tannkrem tannbørste deodorant bleier søppelposer folie bakepapir plastposer svamp batterier"],
+  ["annet", "Annet", ""]
+];
+const CAT_INDEX = Object.fromEntries(CATS.map((c, i) => [c[0], i]));
+const WORDS_BY_LEN = [];
+CATS.forEach(([id, , w]) => w.split(" ").filter(Boolean).forEach(word => WORDS_BY_LEN.push([word, id])));
+WORDS_BY_LEN.sort((a, b) => b[0].length - a[0].length);
+
+const norm = s => s.trim().toLowerCase().replace(/\s+/g, " ");
+const keyOf = s => norm(s).replace(/[^a-z0-9æøå]+/g, "-").replace(/^-|-$/g, "").slice(0, 120) || "x";
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const NUMWORDS = { en: 1, ett: 1, ei: 1, "én": 1, to: 2, tre: 3, fire: 4, fem: 5, seks: 6, sju: 7, syv: 7, "åtte": 8, ni: 9, ti: 10, elleve: 11, tolv: 12 };
+
+function parseInput(raw) {
+  let s = raw.trim().replace(/\s+/g, " ");
+  const w = s.match(/^(\S+)\s+(.+)$/);
+  if (w && NUMWORDS[w[1].toLowerCase()] !== undefined) s = NUMWORDS[w[1].toLowerCase()] + " " + w[2];
+  let m = s.match(/^(\d+(?:[.,]\d+)?)\s*(?:x|stk\.?)?\s+(.+)$/i);
+  if (!m) {
+    m = s.match(/^(.+?)\s+(?:x\s*)?(\d+)\s*(?:stk\.?)?$/i);
+    if (m) m = [m[0], m[2], m[1]];
+  }
+  if (!m) return { qty: "", name: s };
+  const qty = m[1].replace(".", ",");
+  return { qty: qty === "1" ? "" : qty, name: m[2] };
+}
+
+let shopItems = [];
+let shopHistory = new Map();
+let shopUnsubs = [];
+let shopCode = null;
+let fb = null;
+
+function guessCat(name) {
+  const h = shopHistory.get(keyOf(name));
+  if (h && CAT_INDEX[h.cat] !== undefined) return h.cat;
+  const tokens = norm(name).split(/[^a-zæøå]+/).filter(Boolean);
+  for (const [word, id] of WORDS_BY_LEN) if (tokens.includes(word)) return id;
+  for (const [word, id] of WORDS_BY_LEN) {
+    if (word.length >= 4 && tokens.some(t => t.endsWith(word) || t.startsWith(word))) return id;
+  }
+  return "annet";
+}
+
+function codeFromText(t) {
+  const m = String(t || "").trim().match(/#?([A-Za-z0-9]{20,64})\s*$/);
+  return m ? m[1] : null;
+}
+
+async function loadFirebase() {
+  if (fb) return fb;
+  const [A, F] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore.js`)
+  ]);
+  const app = A.initializeApp(firebaseConfig, "startside-handleliste");
+  fb = { F, db: F.getFirestore(app) };
+  return fb;
+}
+
+const shopEls = {
+  setup: document.getElementById("shopSetup"),
+  main: document.getElementById("shopMain"),
+  list: document.getElementById("shopList"),
+  status: document.getElementById("shopStatus"),
+  open: document.getElementById("shopOpen"),
+  input: document.getElementById("shopInput"),
+};
+
+function shopError(e) {
+  const code = e && e.code;
+  shopEls.status.textContent =
+    code === "permission-denied" ? "Fikk ikke tilgang til lista." :
+    code === "resource-exhausted" ? "Gratiskvoten i Firebase er brukt opp for i dag." :
+    "Fikk ikke kontakt med lista. Sjekk nettet.";
+}
+
+function renderShop() {
+  const todo = shopItems.filter(i => !i.done);
+  const doneCount = shopItems.length - todo.length;
+  shopEls.list.innerHTML = "";
+  if (!todo.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = shopItems.length ? "Alt er i kurven." : "Lista er tom.";
+    shopEls.list.append(li);
+  }
+  for (const [cid, label] of CATS) {
+    const g = todo.filter(i => (CAT_INDEX[i.cat] !== undefined ? i.cat : "annet") === cid)
+                  .sort((a, b) => (a.created || 0) - (b.created || 0));
+    if (!g.length) continue;
+    const h = document.createElement("li");
+    h.className = "shop-cat";
+    h.textContent = label;
+    shopEls.list.append(h);
+    g.forEach(it => {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "shop-item";
+      b.title = "Kryss av";
+      const ring = document.createElement("span");
+      ring.className = "ring";
+      const name = document.createElement("span");
+      if (it.qty) {
+        const q = document.createElement("span");
+        q.className = "qty";
+        q.textContent = it.qty + " ×";
+        name.append(q);
+      }
+      name.append(document.createTextNode(it.name));
+      b.append(ring, name);
+      b.addEventListener("click", () => toggleShopItem(it.id));
+      li.append(b);
+      shopEls.list.append(li);
+    });
+  }
+  shopEls.status.textContent = `${todo.length} igjen` + (doneCount ? ` · ${doneCount} i kurven` : "");
+}
+
+async function toggleShopItem(id) {
+  const it = shopItems.find(i => i.id === id);
+  if (!it || !shopCode) return;
+  it.done = !it.done; renderShop();
+  const { F, db } = await loadFirebase();
+  F.updateDoc(F.doc(db, "lister", shopCode, "varer", id), { done: it.done, doneAt: Date.now() }).catch(shopError);
+}
+
+async function addShopItem(raw) {
+  const { qty, name } = parseInput(raw);
+  if (!name || !shopCode) return;
+  const cat = guessCat(name);
+  let me = "";
+  try { me = localStorage.getItem("handlelista-me") || ""; } catch {}
+  const { F, db } = await loadFirebase();
+  F.addDoc(F.collection(db, "lister", shopCode, "varer"),
+    { name: cap(name), qty, cat, done: false, created: Date.now(), by: me }).catch(shopError);
+  // Husk varen, slik appen gjør, så forslag og avdeling stemmer
+  const rec = { name: cap(name.trim()), cat, last: Date.now() };
+  shopHistory.set(keyOf(name), rec);
+  F.setDoc(F.doc(db, "lister", shopCode, "historikk", keyOf(name)), rec).catch(() => {});
+}
+
+function stopShop() {
+  shopUnsubs.forEach(u => { try { u(); } catch {} });
+  shopUnsubs = [];
+  shopItems = []; shopHistory = new Map();
+}
+
+async function startShop(code) {
+  stopShop();
+  shopCode = code;
+  shopEls.setup.hidden = true;
+  shopEls.main.hidden = false;
+  shopEls.status.textContent = "Kobler til …";
+  shopEls.list.innerHTML = "";
+  let url = null;
+  try { url = localStorage.getItem(SHOP_URL_KEY); } catch {}
+  shopEls.open.hidden = !url;
+  if (url) shopEls.open.href = url + "#" + code;
+  try {
+    const { F, db } = await loadFirebase();
+    if (shopCode !== code) return;
+    shopUnsubs.push(F.onSnapshot(F.collection(db, "lister", code, "varer"), snap => {
+      shopItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderShop();
+    }, shopError));
+    shopUnsubs.push(F.onSnapshot(
+      F.query(F.collection(db, "lister", code, "historikk"), F.orderBy("last", "desc"), F.limit(500)),
+      snap => { shopHistory = new Map(snap.docs.map(d => [d.id, d.data()])); },
+      () => {}));
+  } catch (e) {
+    shopEls.status.textContent = "Kunne ikke laste Firebase. Sjekk nettet.";
+  }
+}
+
+function showShopSetup() {
+  stopShop();
+  shopCode = null;
+  shopEls.main.hidden = true;
+  shopEls.open.hidden = true;
+  shopEls.setup.hidden = false;
+}
+
+function connectShop(code, url) {
+  try {
+    localStorage.setItem(SHOP_CODE_KEY, code);
+    if (url) localStorage.setItem(SHOP_URL_KEY, url); else localStorage.removeItem(SHOP_URL_KEY);
+  } catch {}
+  startShop(code);
+}
+
+document.getElementById("shopJoin").addEventListener("submit", e => {
+  e.preventDefault();
+  const raw = document.getElementById("shopLink").value.trim();
+  const code = codeFromText(raw);
+  document.getElementById("shopJoinErr").hidden = !!code;
+  if (!code) return;
+  let url = null;
+  try { const u = new URL(raw); url = u.origin + u.pathname; } catch {}
+  document.getElementById("shopLink").value = "";
+  connectShop(code, url);
+});
+
+document.getElementById("shopForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = shopEls.input.value;
+  shopEls.input.value = "";
+  v.split(",").map(s => s.trim()).filter(Boolean).forEach(addShopItem);
+  shopEls.input.focus();
+});
+
+document.getElementById("shopDisconnect").addEventListener("click", () => {
+  if (!confirm("Koble handlelista fra denne startsiden? Selve lista blir ikke slettet.")) return;
+  try { localStorage.setItem(SHOP_CODE_KEY, "none"); localStorage.removeItem(SHOP_URL_KEY); } catch {}
+  showShopSetup();
+});
+
+(function initShop() {
+  let code = null;
+  try { code = localStorage.getItem(SHOP_CODE_KEY); } catch {}
+  if (code === "none") return showShopSetup();
+  if (!codeFromText(code)) {
+    // Ligger Handlelista på samme nettsted (f.eks. samme github.io-adresse), finnes koden allerede
+    try { code = localStorage.getItem("handlelista-kode"); } catch {}
+  }
+  if (codeFromText(code)) startShop(codeFromText(code));
+  else showShopSetup();
+})();
+
+// ---------- Sikkerhetskopi ----------
+document.getElementById("exportBtn").addEventListener("click", () => {
+  let shopUrl = null;
+  try { shopUrl = localStorage.getItem(SHOP_URL_KEY); } catch {}
+  const data = { app: "startside", version: 2, saved: new Date().toISOString(), links, deadlines, notes,
+                 handleliste: shopCode ? { code: shopCode, url: shopUrl } : null };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `startside-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+const importFile = document.getElementById("importFile");
+document.getElementById("importBtn").addEventListener("click", () => importFile.click());
+importFile.addEventListener("change", async () => {
+  const file = importFile.files[0];
+  importFile.value = "";
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { alert("Filen kunne ikke leses."); return; }
+  if (!data || data.app !== "startside") { alert("Dette ser ikke ut som en sikkerhetskopi av startsiden."); return; }
+  const summary = `${(data.links || []).length} lenker, ${(data.deadlines || []).length} frister og ${(data.notes || []).length} lapper`;
+  if (!confirm(`Hente ${summary}?\n\nDet som ligger på siden nå, blir erstattet.`)) return;
+  links = Array.isArray(data.links) ? data.links : [];
+  deadlines = Array.isArray(data.deadlines) ? data.deadlines : [];
+  notes = Array.isArray(data.notes) ? data.notes : [];
+  save(KEYS.links, links); save(KEYS.deadlines, deadlines); save(KEYS.notes, notes);
+  renderLinks(); renderDeadlines(); renderNotes();
+  if (data.handleliste && codeFromText(data.handleliste.code)) connectShop(codeFromText(data.handleliste.code), data.handleliste.url || null);
+});
+</script>
+</body>
+</html>
